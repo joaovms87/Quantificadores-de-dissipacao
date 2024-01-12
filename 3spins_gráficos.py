@@ -2,40 +2,46 @@ import numpy as np
 import matplotlib.pyplot as plt
 from uncertainties import ufloat
 
-beta = 0.1
-DELTA = 2
+beta = 0.1  # parâmetro de temperatura
+DELTA = 2  # variação total do parâmetro externo
 
-# list of the process durations that will be investigated
+# lista das durações 'tau' que serão investigadas
 taupoints = np.logspace(-3, 5, 200)
 
+# salvar o índice i de taupoints em que 'tau' fica maior que 500
+# esse índice é importante para saber a partir de qual 'tau' será feito o ajuste
 for i, tau in enumerate(taupoints):
     if tau > 500:
         break
 
+# salvar o índice j de taupoints em que 'tau' fica maior que 10000
+# esse índice é salvo porque os dados tais que tau>10000 serão descartados
 for j, tau in enumerate(taupoints):
      if tau > 1e4:
         break
 
-taupoints = taupoints[:j].copy()
+taupoints = taupoints[:j].copy()  # descarta os 'tau' maiores que 10000
 
-for h0 in [-1.1, 0.1]:
-    # reading the previously calculated values for W
+for h0 in [-1.1, 0.1]:  # para cada caso considerado, plotar os gráficos
+    # ler os valores previamente calculados para o trabalho, excluindo os dados para os quais tau>10000
     Wpoints = np.loadtxt(f'W beta={beta} h0={h0}', complex)[:j]
-    WADpoints = np.loadtxt(f'W_ad beta={beta} h0={h0}', complex)[:j]
+    WQSpoints = np.loadtxt(f'W_ad beta={beta} h0={h0}', complex)[:j]
     n = len(Wpoints)
 
-    Wex = np.real(Wpoints - WADpoints)
+    Wex = np.real(Wpoints - WQSpoints)
 
     Dpoints = np.loadtxt(f'D beta={beta} h0={h0}', complex)[:j]
     D2points = np.loadtxt(f'D2 beta={beta} h0={h0}', complex)[:j]
 
-
-    fit1, cov1 = np.polyfit(np.log(taupoints[i:]), np.log(np.real(Wpoints[i:]-WADpoints[i:])), deg=1, cov=True)
+    # faz o fit linear na escala logarítmica
+    # fit1 é um array bidimensional cuja primeira entrada dá -n, na notação do relatório
+    # cov1 é a matriz de covariância do fit
+    fit1, cov1 = np.polyfit(np.log(taupoints[i:]), np.log(Wex), deg=1, cov=True)
     print(f'For h0={h0}, Wex fit...')
-    print(ufloat(fit1[0], np.sqrt(cov1[0, 0])))
-    W_fit1 = taupoints**fit1[0] * np.exp(fit1[1])
+    print(ufloat(fit1[0], np.sqrt(cov1[0, 0])))  # imprime o valor de -n com sua incerteza
+    W_fit1 = taupoints**fit1[0] * np.exp(fit1[1])  # calcula a reta do ajuste para plotar no gráfico
 
-    # plot Wex in log scale
+    # plotar Wex em escala logarítmica
     fig, ax = plt.subplots()
     ax.loglog(taupoints, Wex, 'k.', label=r'$W_\tau(\tau)-W_{ad}(\tau)$')
     ax.loglog(taupoints, W_fit1, 'b--', label=r'Ajuste para $\tau \cdot J/\hbar > 500$')
@@ -48,7 +54,7 @@ for h0 in [-1.1, 0.1]:
     plt.savefig(f'D:\GRÁFICOS IC\FAPESP\spins3\h0={h0}/log(W)_log(tau).png', bbox_inches='tight')
 
 
-    # plot W in linear scale
+    # plotar W em escala linear
     fig, ax = plt.subplots()
     ax.plot(taupoints[:i], np.real(Wpoints[:i]), 'r.', label=r'$W_\tau(\tau)$')
     ax.plot(taupoints[:i], np.real(WADpoints[:i]), 'k--', label=r'$W_{ad}(\tau)$')
@@ -60,7 +66,7 @@ for h0 in [-1.1, 0.1]:
     ax.set_xlim(1e-2, 100)
     plt.savefig(f'D:\GRÁFICOS IC\FAPESP\spins3\h0={h0}/W_linear.png', bbox_inches='tight')
 
-    # plot D in log scale with Wex
+    # plotar D[rho||rho_eq] e Wex juntos em escala logarítmica
     fig, ax = plt.subplots()
     ax.loglog(taupoints, Wex, 'r.', label=r'$W_{\tau,ex}(\tau)$')
     ax.loglog(taupoints, np.real(Dpoints), 'k.', label=r'$D[\rho_\tau (\tau) || \rho_{eq} (\tau)]$')
@@ -72,14 +78,14 @@ for h0 in [-1.1, 0.1]:
     ax.set_box_aspect(1)
     plt.savefig(f'D:\GRÁFICOS IC\FAPESP\spins3\h0={h0}/D vs Wex.png', bbox_inches='tight')
 
-    # fit for D2
+    # Ajuste para D[rho||rho_qs] (mesmo processo que o ajuste feito para Wex)
     fit1, cov1 = np.polyfit(np.log(taupoints[i:]), np.log(np.real(D2points[i:])), deg=1, cov=True)
     print(f'For h0={h0}, D2 fit...')
     print(ufloat(fit1[0], np.sqrt(cov1[0, 0])))
     D2_fit1 = taupoints**fit1[0] * np.exp(fit1[1])
 
 
-    # plot D2 in log scale
+    # plotar D[rho||rho_qs] em escala logarítmica
     fig, ax = plt.subplots()
     ax.loglog(taupoints, np.real(D2points), 'k.', label=r'$D_{\tau,qs}(\tau)$')
     ax.loglog(taupoints, D2_fit1, 'b--', label=r'Ajuste para $\tau \cdot J/\hbar >500$')
@@ -91,7 +97,7 @@ for h0 in [-1.1, 0.1]:
     ax.set_box_aspect(1)
     plt.savefig(f'D:\GRÁFICOS IC\FAPESP\spins3\h0={h0}/log(D2)_log(tau).png', bbox_inches='tight')
 
-    # plot D2 in log scale together with Wex
+    # plot D[rho||rho_qs] e Wex (e seus ajustes) juntos em escala logarítmica
     fig, ax = plt.subplots()
     ax.loglog(taupoints, Wex, 'r.', label=r'$W_{\tau,ex}(\tau)$')
     ax.loglog(taupoints, np.real(D2points), 'b.', label=r'$D_{\tau,qs}(\tau)$')
