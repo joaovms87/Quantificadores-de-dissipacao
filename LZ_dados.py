@@ -106,23 +106,24 @@ for B0 in [-2, -1]:  # resolver as equações para cada caso considerado
         # lista de durações 'tau' que serão investigadas
         taupoints = np.logspace(-2, 5, 200)
         l = len(taupoints)
-        # lists of total work and final D - each entry corresponds to a process with tau in taupoints:
-        Wpoints = np.empty(l, complex)
-        Dpoints = np.empty(l, complex)    # D[rho(tau)||rho_eq(tau)]
-        D2points = np.empty(l, complex)   # D[rho(tau)||rho_qs(tau)]
-        # compute these quantities for each tau
+        # criar arrays referentes ao trabalho total e entropias relativas finais
+        # cada entrada de um dado array se refere ao processo cuja duração 'tau' é a da posição correspondente em taupoints
+        Wpoints = np.empty(l, complex)    # abrigará os valores do trabalho total
+        Dpoints = np.empty(l, complex)    # abrigará os valores de D[rho(tau)||rho_eq(tau)]
+        D2points = np.empty(l, complex)   # abrigará os valores de D[rho(tau)||rho_qs(tau)]
+        # computar essas quantidades para cada 'tau'
 
-        # array of functions [rho00, rho01, rho11] at time 0; necessary to apply the adaptive 4th order Runge-Kutta method
+        # array de incógnitas [rho00, rho01, rho11] em t=0; necessário para aplicar o método Runge-Kutta
         r0 = np.array([rho_eq(0)[0, 0], rho_eq(0)[0, 1], rho_eq(0)[1, 1]], complex)
         for j, tau in enumerate(taupoints):
-            t = 0
+            t = 0  # começar no tempo inicial (t=0)
             N = 100
-            u = tau/N  # Initial step size
+            u = tau/N  # intervalo de discretização inicial; será alterado pela versão adaptativa do método
 
-            # Solve system of differential equations by the adaptive Runge-Kutta method
-            r = r0.copy()
+            # Resolver sistema de equações diferencias pelo método Runge-Kutta adaptativo de 4a ordem 
+            r = r0.copy()  # array de incógnitas
             while t<tau:
-                # two steps of size h
+                # dois passos de tamanho u
                 k1 = u*f(r, t)
                 k2 = u*f(r+0.5*k1, t+0.5*u)
                 k3 = u*f(r+0.5*k2, t+0.5*u)
@@ -133,7 +134,7 @@ for B0 in [-2, -1]:  # resolver as equações para cada caso considerado
                 k3 = u*f(r1+0.5*k2, t+1.5*u)
                 k4 = u*f(r1+k3, t+2*u)
                 r1 += (k1+2*k2+2*k3+k4)/6
-                # one step of size 2h
+                # um passo de tamanho 2u
                 k1 = 2*u*f(r, t)
                 k2 = 2*u*f(r+0.5*k1, t+u)
                 k3 = 2*u*f(r+0.5*k2, t+u)
@@ -141,30 +142,30 @@ for B0 in [-2, -1]:  # resolver as equações para cada caso considerado
                 r2 = r + (k1+2*k2+2*k3+k4)/6
 
                 p = ratio(r1, r2)
-                if p>=1:  # precision greater than required
-                    r = r1  # keep the most precise result
-                    t = t+2*u  # next t
-                # if p>=1 is not satisfied, repeat everything without going to next t
-                u = new_u(u, p)  # changes h regardless of the value of p
+                if p>=1:  # precisão maior que a exigida
+                    r = r1  # manter o resultado mais preciso
+                    t = t+2*u  # passar para o próximo t
+                # se p>=1 não é satisfeito, repetir tudo sem passar para o próximo t
+                u = new_u(u, p)  # muda u independente de p ser maior ou menor que 1
 
 
-            # build the density matrix at time tau for the process of duration tau
+            # construir a matriz densidade final (tempo 'tau') para o processo de duração 'tau'
             rho = np.empty([2, 2], complex)
-            rho[0, 0], rho[0, 1], rho[1, 1] = r
+            rho[0, 0], rho[0, 1], rho[1, 1] = r  # as entradas são calculadas usando o resultado r obtido pelo método 
             rho[1, 0] = np.conj(rho[0, 1])
 
-            # initial energy for computation of the work:
+            # calcular energia incial (segundo eq. (4) do relatório) para computar o trabalho
             E0 = np.trace(np.matmul(rho_eq(0), Ham(0)))
-            # compute the work done in the process of duration tau and save it
+            # computar o trabalho feito no processo de duração 'tau' e salvar
             Wpoints[j] = W(rho)
-            # compute the relative entropy and save it
+            # computar a entropia relativa D[rho||rho_eq] final e salvar
             Dpoints[j] = D(rho, rho_eq(tau))
-            # compute the new relative entropy and save it
+            # computar a entropia relativa D[rho||rho_qs] final e salvar
             D2points[j] = D(rho, rho_qs(tau))
-            # compute W_ad(tau) and save it
+            # computar W_qs(tau) e salvar
             WQSpoints = W_qs(tau)*np.ones(l, complex)
 
-        # save everything
+        # salvar tudo
         np.savetxt(f'W; B0={B0}; beta={beta}', Wpoints)
         np.savetxt(f'W_ad; B0={B0}; beta={beta}', WQSpoints)
         np.savetxt(f'D; B0={B0}; beta={beta}', Dpoints)
