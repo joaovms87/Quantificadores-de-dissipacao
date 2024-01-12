@@ -286,7 +286,7 @@ for h_0 in [-1.1, 0.1]:
     WQSpoints = W_qs(tau)*np.ones(l, complex)
 
     # salvar tudo
-    np.savetxt(f'new W beta={beta} h0={h_0}', Wpoints)
-    np.savetxt(f'new W_ad beta={beta} h0={h_0}', WQSpoints)
-    np.savetxt(f'new D beta={beta} h0={h_0}', Dpoints)
-    np.savetxt(f'new D2 beta={beta} h0={h_0}', D2points)
+    np.savetxt(f'W beta={beta} h0={h_0}', Wpoints)
+    np.savetxt(f'W_ad beta={beta} h0={h_0}', WQSpoints)
+    np.savetxt(f'D beta={beta} h0={h_0}', Dpoints)
+    np.savetxt(f'D2 beta={beta} h0={h_0}', D2points)
